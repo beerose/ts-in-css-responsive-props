@@ -20,6 +20,13 @@ export const unsafeKeys = Object.keys as <T>(
   o: T,
 ) => Extract<keyof T, string>[];
 
+const mediaQueries = [40, 52]
+  .map(n => n + 'em')
+  .map(
+    breakpoint =>
+      `@media screen and (min-width: ${breakpoint})`,
+  );
+
 type ValuesPerBreakpoint<T> = [
   T /* min-width < 40em */,
   T? /* 40em to 52em */,
@@ -46,17 +53,20 @@ function makeResponsive(
 ): types.NestedCSSProperties {
   let next: types.NestedCSSProperties = { $nest: {} };
 
+  // map through all of the properties
   for (const key of unsafeKeys(properties)) {
     const value = properties[key];
+    // if key is $nest the are possible responsive values
     if (key === '$nest') {
+      // if object then make recursive call
       Object.entries(properties.$nest).forEach(([k, v]) => {
         if (v) {
           next.$nest![k] = makeResponsive(v);
         }
       });
+      // if array handle media queries
     } else if (Array.isArray(value)) {
       (next as Record<string, any>)[key] = value[0];
-      // handle ValuesPerBreakpoint,
       for (let i = 1; i < value.length; i++) {
         const media = mediaQueries[i - 1];
         next.$nest![media] = next.$nest![media] || {};
@@ -72,13 +82,6 @@ function makeResponsive(
 
   return next;
 }
-
-const mediaQueries = [40, 52]
-  .map(n => n + 'em')
-  .map(
-    breakpoint =>
-      `@media screen and (min-width: ${breakpoint})`,
-  );
 
 type StyleProperties =
   | NestedResponsiveProperties
